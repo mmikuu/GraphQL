@@ -40,7 +40,7 @@ def create_query(startdate, enddate, endCursorId):
             search(
                 query: "https://chat.openai.com/share/ is:public is:pr pr created:{startdate}..{enddate}"
                 type: ISSUE
-                first: 100
+                first: 10
                 {cursor}
             ) {{
             edges {{
@@ -139,6 +139,7 @@ def creatTable(cursor):
 def main():
     start = ['2023-09-03','2023-09-10','2023-09-17','2023-09-24','2023-10-03','2023-10-01','2023-10-08','2023-10-15','2023-10-22','2023-10-29','2023-11-05','2023-11-12','2023-11-19','2023-11-26','2023-12-03','2023-12-10','2023-12-17','2023-12-24','2023-12-31','2024-01-07','2024-01-14','2024-01-21','2024-01-28','2024-02-04','2024-02-11','2024-02-18','2024-2-25','2024-03-03']
     i = 0
+    page_no = 0
     endCursor = None
     while i < len(start)-1:
         query = create_query(start[i], start[i+1], endCursor)
@@ -146,16 +147,19 @@ def main():
         token = tokens[i % len(tokens)]
         # print('test{}'.format(i))
         res = post(query,token)
-        print(res["data"])
+        print(res)
 
         has_next_page = res["data"]["search"]["pageInfo"]["hasNextPage"]
         endCursor = res["data"]["search"]["pageInfo"]["endCursor"]
         print(has_next_page)
         print(endCursor)
-        save_json(res,f'querry{str(i)}.json')
+        save_json(res,f'data/data_{i}_{page_no}.json')
 
-        if not has_next_page:
+        if has_next_page:
+            page_no += 1
+        else:
             i += 1
+            page_no = 0
         if i % len(tokens) == 0:
             time.sleep(3000)
 
