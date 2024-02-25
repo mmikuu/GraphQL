@@ -1,3 +1,4 @@
+import datetime
 import time
 
 import requests
@@ -140,48 +141,62 @@ def creatTable(cursor):
         print(f"Error creating table: {e}")
 
 
-def errorHandling(endCursor):
-    if endCursor == None:
-        return endCursor
-    # if "Y3Vyc29yOjU3" == endCursor:
-    #     return "Y3Vyc29yOjU4"
-    return endCursor
 
 
-def main():
-    # start = ['2023-09-03','2023-09-10','2023-09-17','2023-09-24','2023-10-03','2023-10-01','2023-10-08','2023-10-15','2023-10-22','2023-10-29','2023-11-05','2023-11-12','2023-11-19','2023-11-26','2023-12-03','2023-12-10','2023-12-17','2023-12-24','2023-12-31','2024-01-07','2024-01-14','2024-01-21','2024-01-28','2024-02-04','2024-02-11','2024-02-18','2024-2-25','2024-03-03']
-    start = '2023-09-03'
-    end = '2024-03-03'
+def convertTimeFromString(s):
+    _ = s.split("T")
+    dates = _[0].split("-")
+    times = _[1].split(":")
+    return datetime.datetime(int(dates[0]), int(dates[1]), int(dates[2]), int(times[0]), int(times[1]), int(times[2]), 0)
+
+
+def covert_t_time(t):
+    return str(t).replace(" ","T")
+
+def run(start_, end_, delta, file_name):
+    start = convertTimeFromString(start_)
+    end = convertTimeFromString(end_)
+    current = start
     it = 0
+    page_no = 0
     endCursor = None
-    while True:
-        endCursor = errorHandling(endCursor)
-        query = create_query(start, end, endCursor)
-        print("tokenNo", it % len(tokens))
+    errors = []
+    print("=====", current, "=====")
+    while current:
+        print("   ", "---", page_no, "---")
+        it += 1
+        next = current + delta
+        query = create_query(covert_t_time(current),
+                             covert_t_time(end),
+                             endCursor)
+        print("      ", "tokenNo", it % len(tokens))
         token = tokens[it % len(tokens)]
-        # print('test{}'.format(i))
-        res = post(query,token)
-        print(res)
+        res = post(query, token)
+        print("      ", res)
         if "errors" in res:
-            if BUTCH_SIZE == 1:
-                print(it)
-                print("finish with: ", endCursor)
-                exit(0)
-            BUTCH_SIZE = 1
-            it += 1
+            errors.append(covert_t_time(current))
+            current = next
+            endCursor = None
+            page_no = 0
             continue
-        BUTCH_SIZE = ORIGINAL_BUTCH_SIZE
         has_next_page = res["data"]["search"]["pageInfo"]["hasNextPage"]
         endCursor = res["data"]["search"]["pageInfo"]["endCursor"]
-        print(endCursor)
-        save_json(res,f'data/data_{it}.json')
-
-        if has_next_page:
-            it += 1
-        else:
-            break
+        save_json(res, f'data/data_{covert_t_time(current)}.json')
+        page_no += 1
+        if not has_next_page:
+            current = next
+            endCursor = None
+            page_no = 0
+            print("=====", current, "=====")
         if it % len(tokens) == 0:
-            time.sleep(0.73)#100秒あたり138回アクセスしたい（60*60*1.38=4968<5000)
+            print("waiting...")
+            time.sleep(0.73)  # 100秒あたり138回アクセスしたい（60*60*1.38=4968<5000)
+    with open(file_name, 'w') as f:
+        f.writelines(errors)
+
+def main():
+    global BUTCH_SIZE
+    run('2023-09-03T00:00:00', '2024-02-01T00:00:00', datetime.timedelta(days=1), 'errors_per_day.txt')
 
 
 if __name__ == '__main__':
