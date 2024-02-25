@@ -144,7 +144,13 @@ def creatTable(cursor):
 
 
 def convertTimeFromString(s):
-    _ = s.split("T")
+    if "T" in s:
+        _ = s.split("T")
+    elif " " in s:
+        _ = s.split(" ")
+    else:
+        raise
+
     dates = _[0].split("-")
     times = _[1].split(":")
     return datetime.datetime(int(dates[0]), int(dates[1]), int(dates[2]), int(times[0]), int(times[1]), int(times[2]), 0)
@@ -215,7 +221,7 @@ def run(start_, end_, unit):
 
 def main():
     global BUTCH_SIZE
-    run('2023-09-03T00:00:00', '2024-02-01T00:00:00', 'day')
+    run('2023-05-27T00:00:00', '2024-02-01T00:00:00', 'day')
     # run('2023-10-01T00:00:00', '2023-10-2T00:00:00', 'day')
 
 
