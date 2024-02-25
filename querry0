@@ -1,14 +1,13 @@
 {
     "errors": [
         {
-            "type": "MAX_NODE_LIMIT_EXCEEDED",
+            "message": "Parse error on \")\" (RPAREN) at [2, 16]",
             "locations": [
                 {
-                    "line": 35,
-                    "column": 25
+                    "line": 2,
+                    "column": 16
                 }
-            ],
-            "message": "By the time this query traverses to the comments connection, it is requesting up to 600,000 possible nodes which exceeds the maximum limit of 500,000."
+            ]
         }
     ]
 }
