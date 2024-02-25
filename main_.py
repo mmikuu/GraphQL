@@ -22,7 +22,7 @@ while True:
   tokens.append(t.replace("\n",""))
 f.close()
 print(tokens)
-#TODO: read tokens from tokens.txt
+
 
 # endpoint
 endpoint = 'https://api.github.com/graphql'
@@ -40,7 +40,7 @@ def create_query(startdate, enddate, endCursorId):
             search(
                 query: "https://chat.openai.com/share/ is:public is:pr pr created:{startdate}..{enddate}"
                 type: ISSUE
-                first: 1 
+                first: 100
                 {cursor}
             ) {{
             edges {{
