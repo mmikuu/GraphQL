@@ -30,7 +30,8 @@ endpoint = 'https://api.github.com/graphql'
 # ratelimit
 # https://developer.github.com/v4/query/  ->  rateLimit
 # https://developer.github.com/v4/object/ratelimit/
-
+ORIGINAL_BUTCH_SIZE = 10
+BUTCH_SIZE = ORIGINAL_BUTCH_SIZE
 def create_query(startdate, enddate, endCursorId):
     cursor = ""
     if endCursorId:
@@ -38,9 +39,12 @@ def create_query(startdate, enddate, endCursorId):
     test01 = {'query': f"""
         query {{
             search(
-                query: "https://chat.openai.com/share/ is:public is:pr pr created:{startdate}..{enddate}"
+                query: "https://chat.openai.com/share/ 
+                is:public 
+                is:pr 
+                pr created:{startdate}..{enddate}"
                 type: ISSUE
-                first: 10
+                first: {BUTCH_SIZE}
                 {cursor}
             ) {{
             edges {{
@@ -136,31 +140,46 @@ def creatTable(cursor):
         print(f"Error creating table: {e}")
 
 
+def errorHandling(endCursor):
+    if endCursor == None:
+        return endCursor
+    # if "Y3Vyc29yOjU3" == endCursor:
+    #     return "Y3Vyc29yOjU4"
+    return endCursor
+
+
 def main():
-    start = ['2023-09-03','2023-09-10','2023-09-17','2023-09-24','2023-10-03','2023-10-01','2023-10-08','2023-10-15','2023-10-22','2023-10-29','2023-11-05','2023-11-12','2023-11-19','2023-11-26','2023-12-03','2023-12-10','2023-12-17','2023-12-24','2023-12-31','2024-01-07','2024-01-14','2024-01-21','2024-01-28','2024-02-04','2024-02-11','2024-02-18','2024-2-25','2024-03-03']
-    i = 0
-    page_no = 0
+    # start = ['2023-09-03','2023-09-10','2023-09-17','2023-09-24','2023-10-03','2023-10-01','2023-10-08','2023-10-15','2023-10-22','2023-10-29','2023-11-05','2023-11-12','2023-11-19','2023-11-26','2023-12-03','2023-12-10','2023-12-17','2023-12-24','2023-12-31','2024-01-07','2024-01-14','2024-01-21','2024-01-28','2024-02-04','2024-02-11','2024-02-18','2024-2-25','2024-03-03']
+    start = '2023-09-03'
+    end = '2024-03-03'
+    it = 0
     endCursor = None
-    while i < len(start)-1:
-        query = create_query(start[i], start[i+1], endCursor)
-        print(i % len(tokens))
-        token = tokens[i % len(tokens)]
+    while True:
+        endCursor = errorHandling(endCursor)
+        query = create_query(start, end, endCursor)
+        print("tokenNo", it % len(tokens))
+        token = tokens[it % len(tokens)]
         # print('test{}'.format(i))
         res = post(query,token)
         print(res)
-
+        if "errors" in res:
+            if BUTCH_SIZE == 1:
+                print(it)
+                print("finish with: ", endCursor)
+                exit(0)
+            BUTCH_SIZE = 1
+            it += 1
+            continue
+        BUTCH_SIZE = ORIGINAL_BUTCH_SIZE
         has_next_page = res["data"]["search"]["pageInfo"]["hasNextPage"]
         endCursor = res["data"]["search"]["pageInfo"]["endCursor"]
-        print(has_next_page)
-        print(endCursor)
-        save_json(res,f'data/data_{i}_{page_no}.json')
+        save_json(res,f'data/data_{it}.json')
 
         if has_next_page:
-            page_no += 1
+            it += 1
         else:
-            i += 1
-            page_no = 0
-        if i % len(tokens) == 0:
+            break
+        if it % len(tokens) == 0:
             time.sleep(0.73)#100秒あたり138回アクセスしたい（60*60*1.38=4968<5000)
 
 
