@@ -162,7 +162,7 @@ def run(start_, end_, delta, file_name):
     endCursor = None
     errors = []
     print("=====", current, "=====")
-    while current:
+    while current < end:
         print("   ", "---", page_no, "---")
         it += 1
         next = current + delta
@@ -197,6 +197,7 @@ def run(start_, end_, delta, file_name):
 def main():
     global BUTCH_SIZE
     run('2023-09-03T00:00:00', '2024-02-01T00:00:00', datetime.timedelta(days=1), 'errors_per_day.txt')
+    # run('2023-09-03T00:00:00', '2023-10-1T00:00:00', datetime.timedelta(days=1), 'errors_per_day.txt')
 
 
 if __name__ == '__main__':
