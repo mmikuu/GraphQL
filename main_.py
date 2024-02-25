@@ -174,7 +174,8 @@ def run(start_, end_, delta, file_name):
         res = post(query, token)
         print("      ", res)
         if "errors" in res:
-            errors.append(covert_t_time(current))
+            print("ERROR FOUND")
+            errors.append(covert_t_time(current)+"\n")
             current = next
             endCursor = None
             page_no = 0
@@ -196,8 +197,8 @@ def run(start_, end_, delta, file_name):
 
 def main():
     global BUTCH_SIZE
-    run('2023-09-03T00:00:00', '2024-02-01T00:00:00', datetime.timedelta(days=1), 'errors_per_day.txt')
-    # run('2023-09-03T00:00:00', '2023-10-1T00:00:00', datetime.timedelta(days=1), 'errors_per_day.txt')
+    # run('2023-09-03T00:00:00', '2024-02-01T00:00:00', datetime.timedelta(days=1), 'errors_per_day.txt')
+    run('2023-10-01T00:00:00', '2023-11-1T00:00:00', datetime.timedelta(days=1), 'errors_per_day.txt')
 
 
 if __name__ == '__main__':
