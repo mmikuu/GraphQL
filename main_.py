@@ -161,7 +161,7 @@ def main():
             i += 1
             page_no = 0
         if i % len(tokens) == 0:
-            time.sleep(3000)
+            time.sleep(0.73)#100秒あたり138回アクセスしたい（60*60*1.38=4968<5000)
 
 
 if __name__ == '__main__':
