@@ -153,7 +153,25 @@ def convertTimeFromString(s):
 def covert_t_time(t):
     return str(t).replace(" ","T")
 
-def run(start_, end_, delta, file_name):
+
+def get_delta(unit):
+    if unit == "day":
+        delta = datetime.timedelta(days=1)
+    elif unit == "hour":
+        delta = datetime.timedelta(hours=1)
+    elif unit == "minute":
+        delta = datetime.timedelta(minutes=1)
+    else:
+        print("Wrong argument")
+        raise
+    return delta
+
+
+def run(start_, end_, unit):
+    delta = get_delta(unit)
+
+
+
     start = convertTimeFromString(start_)
     end = convertTimeFromString(end_)
     current = start
@@ -182,7 +200,7 @@ def run(start_, end_, delta, file_name):
             continue
         has_next_page = res["data"]["search"]["pageInfo"]["hasNextPage"]
         endCursor = res["data"]["search"]["pageInfo"]["endCursor"]
-        save_json(res, f'data/data_{covert_t_time(current)}.json')
+        save_json(res, f'data/{unit}/data_{covert_t_time(current)}_{page_no}.json')
         page_no += 1
         if not has_next_page:
             current = next
@@ -192,13 +210,13 @@ def run(start_, end_, delta, file_name):
         if it % len(tokens) == 0:
             print("waiting...")
             time.sleep(0.73)  # 100秒あたり138回アクセスしたい（60*60*1.38=4968<5000)
-    with open(file_name, 'w') as f:
+    with open(f"errors_per_{unit}.txt", 'w') as f:
         f.writelines(errors)
 
 def main():
     global BUTCH_SIZE
-    # run('2023-09-03T00:00:00', '2024-02-01T00:00:00', datetime.timedelta(days=1), 'errors_per_day.txt')
-    run('2023-10-01T00:00:00', '2023-11-1T00:00:00', datetime.timedelta(days=1), 'errors_per_day.txt')
+    run('2023-09-03T00:00:00', '2024-02-01T00:00:00', 'day')
+    # run('2023-10-01T00:00:00', '2023-10-2T00:00:00', 'day')
 
 
 if __name__ == '__main__':

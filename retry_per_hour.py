@@ -29,7 +29,7 @@ def main():
     errorTime = readFile("errors_per_day.txt")
     errorHours = delayHour(errorTime)
     for i in range(len(errorHours)-1):
-        run(errorHours[i], errorHours[i+1], datetime.timedelta(hours=1), 'errors_per_hour.txt')
+        run(errorHours[i], errorHours[i+1], 'hour')
 
 if __name__ == '__main__':
     main()
