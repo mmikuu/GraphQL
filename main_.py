@@ -12,7 +12,16 @@ import json
 # python3 github.py | jq . -C | less -R
 
 # token
-tokens = ["aiueo", "kakikukeko"]
+tokens = []
+
+f = open('tokens.txt', 'r')
+while True:
+  t = f.readline()
+  if t == '':
+    break
+  tokens.append(t.replace("\n",""))
+f.close()
+print(tokens)
 #TODO: read tokens from tokens.txt
 
 # endpoint
