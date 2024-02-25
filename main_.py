@@ -173,6 +173,7 @@ def main():
         BUTCH_SIZE = ORIGINAL_BUTCH_SIZE
         has_next_page = res["data"]["search"]["pageInfo"]["hasNextPage"]
         endCursor = res["data"]["search"]["pageInfo"]["endCursor"]
+        print(endCursor)
         save_json(res,f'data/data_{it}.json')
 
         if has_next_page:
