@@ -7,6 +7,7 @@ import mysql.connector
 import os
 import time
 import glob
+import emoji
 
 #
 # 　git clone
@@ -44,7 +45,7 @@ def wget_repo():
 #
 # 　Extract data from snapshot
 #
-def readJson(filePath):
+def readJson(jfile):
     Request_Data = {}
     AllProject_list = set()
     FilteredProject_list = set()
@@ -53,46 +54,86 @@ def readJson(filePath):
     AllLink = set()
     FilteredPR = set()
     Id = 0
+    title = ''
+    url = ''
+    body = ''
+    mentioned_url = ''
+    create_time = ''
+    mentioned_text_check = []
 
-    with open(filePath) as f:
-        di = json.load(f)
-        print(type(di))
+    for path in filePath:
+        with open(path, 'r+') as f:
+            jfile = json.load(f)
 
-    for source in di['data']:
-        searches = source.get('search')
-        for search in searches:
-            edges = search.get('node',{})
-            print("edge"+edges)
-            if edges == []:
+        for source in jfile['data']['search']['edges']:
+            nodes = source.get('node',[])
+            if source == []:
+                print('edgeが入っていません')
                 return None
-            for edge in edges:
-                nodes = edge.get('node')
-                for node in nodes:
-                    author = node['author']
-                    create_time = node.get('CreatedAt', [])
-                    body = node.get('Body', [])[:1000]
-                    AllProject_list.add(str(node.get('title', [])))
-                    AllPR.add(node.get('url', []))
-                    AllPR_number = node.get('number',[])
-                    reviews = node.get('reviews')
-                for review in reviews:
-                    reviewEdges = review.get('edges')
-                    for reviewEdge in reviewEdges:
-                        reviewNodes = reviewEdge.get('node')
-                        for reviewNode in reviewNodes:
-                            mentioned_text= reviewNode.get('bodyText', [])
-                            if(mentioned_text.contains("chat.openai")):
-                                mentioned_url = reviewNode.get('url', [])
-                                AllLink.add(mentioned_url)
-                                mentionedAuthorInfo = reviewNode.get('author', [])
-                                mentionedAuthor = mentionedAuthorInfo.get('login', [])
+            for node_key,node_value in nodes.items():
+                if node_key == 'author':
+                    author = node_value['login']
+                    print(author)
+                if node_key == 'createdAt':
+                    create_time = node_value
+                if node_key == 'body':
+                    body = node_value[:1000]
+                if node_key == 'title':
+                    title = node_value
+                    AllProject_list.add(str(title))
+                if node_key == 'url':
+                    url = node_value
+                    AllPR.add(url)
+                if node_key == 'number':
+                    AllPR_number.add(node_value)
+                if node_key == 'reviews':
+                    reviews = node_value.get('edges',[])
+                    for review in reviews:
+                        reviewNodes = review.get('node',[])
+                        for reviewNode_key, reviewNodes_value in reviewNodes.items():
+                            if reviewNode_key == 'comments':
+                                reviewCommentEdges = reviewNodes_value.get('edges',[])
+                                for reviewCommentEdge in reviewCommentEdges:
+                                    reviewCommentNodes = reviewCommentEdge.get('node', [])
+                                    chatGPT = False
+                                    authorFlag = False
+                                    urlFlag = False
+                                    for reviewCommentNodes_key,reviewCommentNodes_value in reviewCommentNodes.items():
+                                        if reviewCommentNodes_key == 'url':
+                                            mentioned_url = reviewCommentNodes_value
+                                            AllLink.add(mentioned_url)
+                                            urlFlag = True
 
-                                if author != mentionedAuthor:
-                                    FilteredProject_list.add(str(node.get('title', [])))
-                                    FilteredPR.add(node.get('url', []))
+                                        if reviewCommentNodes_key == 'author':
+                                            mentionedAuthor = reviewCommentNodes_value['login']
+                                            authorFlag = True
+                                        if reviewCommentNodes_key == 'bodyText':
+                                            mentioned_text = reviewCommentNodes_value
+                                            if "https://chat.openai.com/share/" in mentioned_text:
+                                                if not mentioned_text in mentioned_text_check:
+                                                    mentioned_text_check.append(mentioned_text)
+                                                    chatGPT = True
 
-                                    Id += 1
-                                    Request_Data[Id] = pullRequestData.PullRequestData(author, body, mentionedAuthor, mentioned_text,mentioned_url,create_time)
+                                        if chatGPT == True and authorFlag == True and urlFlag ==True:
+                                            if author != mentionedAuthor:
+                                                FilteredProject_list.add(str(title))
+                                                FilteredPR.add(mentioned_url)
+
+                                                Id += 1
+                                                Request_Data[Id] = pullRequestData.PullRequestData(author, body,
+                                                                                                   mentionedAuthor,
+                                                                                                   mentioned_text,
+                                                                                                   mentioned_url,
+                                                                                                   create_time,
+                                                                                                   path)
+                                                chatGPT = False
+                                                authorFlag = False
+                                                urlFlag = False
+
+
+
+
+
     print(len(AllPR_number))
     allCommitData = projectData.projectData(len(AllProject_list), len(FilteredProject_list), len(AllPR),
                                             len(FilteredPR), len(AllLink), len(Request_Data))
@@ -114,7 +155,7 @@ def creatTable(cursor):
                        reviewer varchar(100) NOT NULL COLLATE utf8mb4_unicode_ci , 
                        body VARCHAR(5000) NOT NULL COLLATE utf8mb4_unicode_ci , 
                        mention VARCHAR(5000) NOT NULL COLLATE utf8mb4_unicode_ci , 
-                       url VARCHAR(1000) NOT NULL COLLATE utf8mb4_unicode_ci , 
+                       url VARCHAR(5000) NOT NULL COLLATE utf8mb4_unicode_ci , 
                        PRIMARY KEY (id)
                        )""")
     except Exception as e:
@@ -126,8 +167,8 @@ def creatTable(cursor):
 #
 def addDataBase(cursor, directory, author, reviewer, body, mention, url, create_time):
     # Add data
-    sql = "INSERT INTO pr_commit_list(directory, author, createtime,reviewer, body, mention, url) VALUES(%s,%s,%s,%s,%s,%s,%s)"
-    cursor.execute(sql, (directory, author, create_time,reviewer, body, mention, url))
+    sql = "INSERT INTO pullRequestTable(directory, author, createtime,reviewer, body, mention, url) VALUES(%s,%s,%s,%s,%s,%s,%s)"
+    cursor.execute(sql, (directory, author, create_time,reviewer, body, mention[:1000], url))
     connection.commit()
 
 
@@ -170,16 +211,20 @@ if __name__ == '__main__':
     # fileHead = git_directory+"/"
     filePath = getFilePath()
     print(filePath)
+    # path = './data/day/data_2023-05-27T00:00:00_3.json'
+    json_dict = readJson(filePath)
+    # for path in filePath:
+    #     with open(path, 'r+') as f:
+    #         jfile = json.load(f)
 
-    json_dict = {}
-    for path in filePath:
-        # json_dict[path] = readJson(fileHead + path)
-        json_dict[path] = readJson(path)
+    # pullrequestのreturnを下のfor分に追加
+    print(json_dict.allCommitData.get_string())
+    for value in json_dict.Request_Data.values():
+        value.mention = emoji.replace_emoji(value.mention)
+        value.body = emoji.replace_emoji(value.body)
+        if value.url=="":
+            print("error")
+        addDataBase(cursor, value.path, value.writeAuthor, value.reviewAuthor, value.body, value.mention, value.url,
+                        value.create_time)
 
-    for k, data in json_dict.items():
-        print(data.allCommitData.get_string())
-        for value in data.Request_Data.values():
-            addDataBase(cursor, k, value.writeAuthor, value.reviewAuthor, value.body, value.mention, value.url,
-                            value.create_time)
-
-    PRs = deleteSamecommit(json_dict)
+    # PRs = deleteSamecommit(json_dict)
