@@ -43,7 +43,7 @@ def create_query(startdate, enddate, endCursorId):
                 query: "https://chat.openai.com/share/ 
                 is:public 
                 is:pr 
-                pr created:{startdate}..{enddate}"
+                created:{startdate}..{enddate}"
                 type: ISSUE
                 first: {BUTCH_SIZE}
                 {cursor}
@@ -176,8 +176,6 @@ def get_delta(unit):
 def run(start_, end_, unit):
     delta = get_delta(unit)
 
-
-
     start = convertTimeFromString(start_)
     end = convertTimeFromString(end_)
     current = start
@@ -190,8 +188,11 @@ def run(start_, end_, unit):
         print("   ", "---", page_no, "---")
         it += 1
         next = current + delta
-        query = create_query(covert_t_time(current),
-                             covert_t_time(end),
+        print("      from:", current)
+        print("      to:", next)
+
+        query = create_query(covert_t_time(current)+'Z',
+                             covert_t_time(next)+'Z',
                              endCursor)
         print("      ", "tokenNo", it % len(tokens))
         token = tokens[it % len(tokens)]
@@ -200,6 +201,7 @@ def run(start_, end_, unit):
         if "errors" in res:
             print("ERROR FOUND")
             errors.append(covert_t_time(current)+"\n")
+            print(len(errors))
             current = next
             endCursor = None
             page_no = 0
@@ -216,12 +218,14 @@ def run(start_, end_, unit):
         if it % len(tokens) == 0:
             print("waiting...")
             time.sleep(0.73)  # 100秒あたり138回アクセスしたい（60*60*1.38=4968<5000)
-    with open(f"errors_per_{unit}.txt", 'w') as f:
-        f.writelines(errors)
+    return errors
 
 def main():
     global BUTCH_SIZE
-    run('2023-05-27T00:00:00', '2024-02-01T00:00:00', 'day')
+    unit = 'day'
+    errors = run('2023-05-27T00:00:00', '2024-02-01T00:00:00', unit)
+    with open(f"errors_per_{unit}.txt", 'w') as f:
+        f.writelines(errors)
     # run('2023-10-01T00:00:00', '2023-10-2T00:00:00', 'day')
 
 

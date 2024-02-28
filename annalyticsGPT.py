@@ -69,7 +69,7 @@ def readJson(jfile):
             nodes = source.get('node',[])
             if source == []:
                 print('edgeが入っていません')
-                return None
+                raise
             for node_key,node_value in nodes.items():
                 if node_key == 'author':
                     author = node_value['login']

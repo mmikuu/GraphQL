@@ -34,16 +34,19 @@ def delayHour(errorTime):
             newErrorEndTimes.append(str(time) + "T" + str(hour + 1).zfill(2) + ":00:00")
         print(newErrorStartTimes)
         print(newErrorEndTimes)
-        return newErrorStartTimes, newErrorEndTimes
     return newErrorStartTimes,newErrorEndTimes
 
 def main():
+    unit = 'hour'
+    errors = []
     errorTime = readFile("errors_per_day.txt")
     errorStartHours,errorEndHours = delayHour(errorTime)
-    for start ,end in zip(errorStartHours,errorEndHours):
+    for start,end in zip(errorStartHours,errorEndHours):
         print(start)
         print(end)
-        run(start, end, 'hour')
+        errors.extend(run(start, end, unit))
+    with open(f"errors_per_{unit}.txt", 'w') as f:
+        f.writelines(errors)
 
 if __name__ == '__main__':
     main()
