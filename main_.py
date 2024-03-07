@@ -70,6 +70,12 @@ def create_query(startdate, enddate, endCursorId):
                     login
                   }}
                   body
+                  comments(first: 100) {{
+                      nodes {{
+                        createdAt
+                        bodyText
+                        }}
+                  }}
                   reviews(first: 100) {{
                     edges {{
                       node {{
@@ -224,6 +230,7 @@ def main():
     global BUTCH_SIZE
     unit = 'day'
     errors = run('2023-05-27T00:00:00', '2024-02-01T00:00:00', unit)
+    # errors = run('2023-09-21T00:00:00', '2023-09-23T00:00:00', unit)
     with open(f"errors_per_{unit}.txt", 'w') as f:
         f.writelines(errors)
     # run('2023-10-01T00:00:00', '2023-10-2T00:00:00', 'day')
