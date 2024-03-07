@@ -94,6 +94,7 @@ def readJson(jfile):
                     commentUrlFlag = False
                     for comment in comments:
                         comment_url = comment.get('url',[])
+                        print(comment_url)
                         commentAuthorInfo = comment.get('author', [])
                         comment_text = comment.get('bodyText',[])
                         if not comment_url is None:
@@ -104,10 +105,13 @@ def readJson(jfile):
                         if not commentAuthorInfo is None:
                             commentAuthor = commentAuthorInfo['login']
                             commentAuthorFlag = True
+                            print("author"+str(commentAuthor))
 
 
                         if "https://chat.openai.com/share/" in comment_text:
                             if not comment_text in mentioned_text_check:
+                                print(comment_text)
+                                print("--------------------------------")
                                 mentioned_text_check.append(comment_text)
                                 commentChatGPT = True
 
@@ -120,12 +124,14 @@ def readJson(jfile):
                                 Request_Data[Id] = pullRequestData.PullRequestData(author, body,
                                                                                    commentAuthor,
                                                                                    comment_text,
-                                                                                   mentioned_url,
+                                                                                   comment_url,
                                                                                    create_time,
                                                                                    path)
-                                commentChatGPT = False
-                                commentAuthorFlag = False
-                                commentUrlFlag = False
+
+
+                        commentChatGPT = False
+                        commentAuthorFlag = False
+                        commentUrlFlag = False
 
 
                 if node_key == 'reviews':
@@ -171,6 +177,11 @@ def readJson(jfile):
                                                 chatGPT = False
                                                 authorFlag = False
                                                 urlFlag = False
+                                            else:
+                                                chatGPT = False
+                                                authorFlag = False
+                                                urlFlag = False
+
 
 
 
