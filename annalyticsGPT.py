@@ -86,6 +86,48 @@ def readJson(jfile):
                     AllPR.add(url)
                 if node_key == 'number':
                     AllPR_number.add(node_value)
+
+                if node_key == 'comments':
+                    comments = node_value.get('nodes',[])
+                    commentChatGPT = False
+                    commentAuthorFlag = False
+                    commentUrlFlag = False
+                    for comment in comments:
+                        comment_url = comment.get('url',[])
+                        commentAuthorInfo = comment.get('author', [])
+                        comment_text = comment.get('bodyText',[])
+                        if not comment_url is None:
+                            AllLink.add(comment_url)
+                            commentUrlFlag = True
+
+
+                        if not commentAuthorInfo is None:
+                            commentAuthor = commentAuthorInfo['login']
+                            commentAuthorFlag = True
+
+
+                        if "https://chat.openai.com/share/" in comment_text:
+                            if not comment_text in mentioned_text_check:
+                                mentioned_text_check.append(comment_text)
+                                commentChatGPT = True
+
+                        if commentChatGPT == True and commentAuthorFlag == True and commentUrlFlag == True:
+                            if author != commentAuthor:
+                                FilteredProject_list.add(str(title))
+                                FilteredPR.add(comment_url)
+
+                                Id += 1
+                                Request_Data[Id] = pullRequestData.PullRequestData(author, body,
+                                                                                   commentAuthor,
+                                                                                   comment_text,
+                                                                                   mentioned_url,
+                                                                                   create_time,
+                                                                                   path)
+                                commentChatGPT = False
+                                commentAuthorFlag = False
+                                commentUrlFlag = False
+
+
                 if node_key == 'reviews':
                     reviews = node_value.get('edges',[])
                     for review in reviews:

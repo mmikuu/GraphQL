@@ -74,7 +74,11 @@ def create_query(startdate, enddate, endCursorId):
                       nodes {{
                         createdAt
                         bodyText
+                        url
+                        author{{
+                            login
                         }}
+                    }}
                   }}
                   reviews(first: 100) {{
                     edges {{
