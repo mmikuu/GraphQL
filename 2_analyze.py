@@ -122,49 +122,7 @@ def readJson(jfile):
 #
 # create DB
 #
-def creatTable(cursor):
-    cursor.execute("DROP TABLE IF EXISTS pullRequestTable")
-    try:
-        cursor.execute("""CREATE TABLE pullRequestTable(
-                       id INT(11) AUTO_INCREMENT NOT NULL,
-                       directory VARCHAR(1000) NOT NULL COLLATE utf8mb4_unicode_ci , 
-                       author VARCHAR(100) NOT NULL COLLATE utf8mb4_unicode_ci , 
-                       createtime VARCHAR(100) NOT NULL COLLATE utf8mb4_unicode_ci , 
-                       reviewer varchar(100) NOT NULL COLLATE utf8mb4_unicode_ci , 
-                       body VARCHAR(5000) NOT NULL COLLATE utf8mb4_unicode_ci , 
-                       mention VARCHAR(5000) NOT NULL COLLATE utf8mb4_unicode_ci , 
-                       url VARCHAR(5000) NOT NULL COLLATE utf8mb4_unicode_ci , 
-                       PRIMARY KEY (id)
-                       )""")
-    except Exception as e:
-        print(f"Error creating table: {e}")
 
-
-#
-# Add data
-#
-def addDataBase(cursor, directory, author, reviewer, body, mention, url, create_time):
-    # Add data
-    sql = "INSERT INTO pullRequestTable(directory, author, createtime,reviewer, body, mention, url) VALUES(%s,%s,%s,%s,%s,%s,%s)"
-    cursor.execute(sql, (directory, author, create_time,reviewer, body, mention[:1000], url))
-    connection.commit()
-
-
-#
-# delete same commit
-#
-def deleteSamecommit(json_dict):
-    validator = set()
-    distinct_PRs = []
-    for _, pre_value in json_dict.items():
-        for _, p_value in pre_value.Request_Data.items():
-            if p_value.get_string() in validator:
-                # print("already exist")
-                pass
-            else:
-                distinct_PRs.append(p_value)
-                validator.add(p_value.get_string())
-    return distinct_PRs
 
 def getFilePath():
     file = []
@@ -264,7 +222,6 @@ if __name__ == '__main__':
 
     filePath = getFilePath()
     print(filePath)
-    # path = './data/day/data_2023-05-27T00:00:00_3.json'
     all_pull_requests = readJson(filePath)
 
 
