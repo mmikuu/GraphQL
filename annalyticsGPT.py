@@ -9,6 +9,8 @@ import time
 import glob
 import emoji
 
+from module.pullRequestData import Comment, PullRequestData
+
 #
 # 　git clone
 #
@@ -45,144 +47,78 @@ def wget_repo():
 #
 # 　Extract data from snapshot
 #
-def readJson(jfile):
-    Request_Data = {}
-    AllProject_list = set()
-    FilteredProject_list = set()
-    AllPR = set()
-    AllPR_number = set()
-    AllLink = set()
-    FilteredPR = set()
-    Id = 0
-    title = ''
-    url = ''
-    body = ''
-    mentioned_url = ''
-    create_time = ''
-    mentioned_text_check = []
+def extract_comment(node):
+    c = Comment()
+    c.url = node.get('url')
+    c.comment_text = node.get('bodyText', [])
+    if "https://chat.openai.com/share/" in c.comment_text:
+        c.has_chatGPT_link = True
+    if not node.get('author', []) is None:
+        c.author = node.get('author', [])['login']
+    if not node.get('originalCommit') is None:
+        c.date = node.get('originalCommit')['authoredDate']  # TODO: should be commented date
+    return c
+def extract_comments(node_value):
+    comments = []
+    if node_value is None:
+        return comments
+    nodes = node_value.get('nodes', [])
+    for node in nodes:
+        comments.append(extract_comment(node))
+    return comments
 
-    for path in filePath:
+def extract_review_comments(node_value):
+    comments = []
+    edges = node_value.get('node', []).get("comments",[]).get("edges",[])
+    for edge in edges:
+        node = edge.get("node")
+        comments.append(extract_comment(node))
+    return comments
+
+
+def extract_reviews(node_value):
+    all_comments = []
+    reviews = node_value.get('edges', [])
+    for review in reviews:
+        comments = extract_review_comments(review)
+        all_comments.extend(comments)
+    return all_comments
+
+
+
+
+
+def extract(jfile):
+    pull_requests = []
+    for source in jfile['data']['search']['edges']:
+        pr = pullRequestData.PullRequestData()
+        nodes = source.get('node', [])
+        if source == []:
+            print('no edge')
+            raise
+        pr.author = nodes.get('author')['login']
+        pr.create_time = nodes.get('createdAt')
+        pr.body = nodes.get('body')[:1000]
+        pr.title = nodes.get('title')
+        pr.url = nodes.get('url')
+        pr.number = nodes.get('number')
+        pr.comments = extract_comments(nodes.get('comments'))
+        pr.comments.extend(extract_reviews(nodes.get('reviews')))
+        pr.repository = nodes.get("repository")["nameWithOwner"]
+        pull_requests.append(pr)
+    return pull_requests
+
+def readJson(jfile):
+    pull_requests = []
+    for path in jfile:
+        print(path)
         with open(path, 'r+') as f:
             jfile = json.load(f)
-
-        for source in jfile['data']['search']['edges']:
-            nodes = source.get('node',[])
-            if source == []:
-                print('edgeが入っていません')
-                raise
-            for node_key,node_value in nodes.items():
-                if node_key == 'author':
-                    author = node_value['login']
-                    print(author)
-                if node_key == 'createdAt':
-                    create_time = node_value
-                if node_key == 'body':
-                    body = node_value[:1000]
-                if node_key == 'title':
-                    title = node_value
-                    AllProject_list.add(str(title))
-                if node_key == 'url':
-                    url = node_value
-                    AllPR.add(url)
-                if node_key == 'number':
-                    AllPR_number.add(node_value)
-
-                if node_key == 'comments':
-                    comments = node_value.get('nodes',[])
-                    commentChatGPT = False
-                    commentAuthorFlag = False
-                    commentUrlFlag = False
-                    for comment in comments:
-                        comment_url = comment.get('url',[])
-                        commentAuthorInfo = comment.get('author', [])
-                        comment_text = comment.get('bodyText',[])
-                        if not comment_url is None:
-                            AllLink.add(comment_url)
-                            commentUrlFlag = True
-
-
-                        if not commentAuthorInfo is None:
-                            commentAuthor = commentAuthorInfo['login']
-                            commentAuthorFlag = True
-
-
-                        if "https://chat.openai.com/share/" in comment_text:
-                            if not comment_text in mentioned_text_check:
-                                mentioned_text_check.append(comment_text)
-                                commentChatGPT = True
-
-                        if commentChatGPT == True and commentAuthorFlag == True and commentUrlFlag == True:
-                            if author != commentAuthor:
-                                FilteredProject_list.add(str(title))
-                                FilteredPR.add(comment_url)
-
-                                Id += 1
-                                Request_Data[Id] = pullRequestData.PullRequestData(author, body,
-                                                                                   commentAuthor,
-                                                                                   comment_text,
-                                                                                   mentioned_url,
-                                                                                   create_time,
-                                                                                   path)
-                                commentChatGPT = False
-                                commentAuthorFlag = False
-                                commentUrlFlag = False
-
-
-                if node_key == 'reviews':
-                    reviews = node_value.get('edges',[])
-                    for review in reviews:
-                        reviewNodes = review.get('node',[])
-                        for reviewNode_key, reviewNodes_value in reviewNodes.items():
-                            if reviewNode_key == 'comments':
-                                reviewCommentEdges = reviewNodes_value.get('edges',[])
-                                for reviewCommentEdge in reviewCommentEdges:
-                                    reviewCommentNodes = reviewCommentEdge.get('node', [])
-                                    chatGPT = False
-                                    authorFlag = False
-                                    urlFlag = False
-                                    for reviewCommentNodes_key,reviewCommentNodes_value in reviewCommentNodes.items():
-                                        if reviewCommentNodes_key == 'url':
-                                            mentioned_url = reviewCommentNodes_value
-                                            AllLink.add(mentioned_url)
-                                            urlFlag = True
-
-                                        if reviewCommentNodes_key == 'author':
-                                            mentionedAuthor = reviewCommentNodes_value['login']
-                                            authorFlag = True
-                                        if reviewCommentNodes_key == 'bodyText':
-                                            mentioned_text = reviewCommentNodes_value
-                                            if "https://chat.openai.com/share/" in mentioned_text:
-                                                if not mentioned_text in mentioned_text_check:
-                                                    mentioned_text_check.append(mentioned_text)
-                                                    chatGPT = True
-
-                                        if chatGPT == True and authorFlag == True and urlFlag ==True:
-                                            if author != mentionedAuthor:
-                                                FilteredProject_list.add(str(title))
-                                                FilteredPR.add(mentioned_url)
-
-                                                Id += 1
-                                                Request_Data[Id] = pullRequestData.PullRequestData(author, body,
-                                                                                                   mentionedAuthor,
-                                                                                                   mentioned_text,
-                                                                                                   mentioned_url,
-                                                                                                   create_time,
-                                                                                                   path)
-                                                chatGPT = False
-                                                authorFlag = False
-                                                urlFlag = False
-
-
-
-
-
-    print(len(AllPR_number))
-    allCommitData = projectData.projectData(len(AllProject_list), len(FilteredProject_list), len(AllPR),
-                                            len(FilteredPR), len(AllLink), len(Request_Data))
-    pullResult = commitData.commitData(allCommitData, Request_Data)
-    return pullResult
-
-
+        pr = extract(jfile)
+        pull_requests.extend(pr)
+    msr_pull_requests = readMSR()
+    pull_requests.extend(msr_pull_requests)
+    return pull_requests
 #
 # create DB
 #
@@ -237,36 +173,108 @@ def getFilePath():
     file.extend(glob.glob("./data/min/*"))
     return file
 
+
+def filter_comments(pull_requests):
+    comments = []
+    comments_set = set()
+    num_pr = set()
+    num_reviews = set()
+    num_pr_non_author = set()
+    num_reviews_non_author = set()
+    num_project = set()
+    for pr in pull_requests:
+        # print("    ", len(pr.comments))
+        if pr == None:
+            continue
+        for c in pr.comments:
+            if c.url in comments_set:
+                continue
+            if not c.has_chatGPT_link:
+                continue
+
+            num_pr.add(pr.url)
+            num_reviews.add(c.url)
+            num_project.add(pr.repository)
+            if c.author == pr.author:
+                continue
+            num_pr_non_author.add(pr.url)
+            num_reviews_non_author.add(c.url)
+            c.repository = pr.repository
+            c.pr_url = pr.url
+            c.number = pr.number
+            comments.append(c)
+            comments_set.add(c.url)
+    print("# Collected All Pull Requests", len(num_pr))
+    print("# Collected All Reviews", len(num_reviews))
+    print("# Collected All Projects", len(num_project))
+    print("# PRs with Links", len(num_pr_non_author))
+    print("# Comments with Links", len(num_reviews_non_author))
+    return comments, comments_set
+    pass
+
+
+def extract_projects(comments):
+    projects = set()
+    for comment in comments:
+        projects.add(comment.repository)
+    print("# Projects", len(projects))
+    return projects
+
+
+def extract_prs(comments):
+    prs = set()
+    for comment in comments:
+        prs.add(comment.pr_url)
+    return prs
+
+
+def readMSR():
+    msr = set()
+    with open('msr.txt') as f:
+        for line in f:
+            msr.add(line.replace("\n", ""))
+    prs = {}
+
+    for m in msr:
+        c = Comment()
+        c.url = m
+        c.pr_url = m.split("#")[0]
+        _ = c.pr_url.replace("https://github.com/", "").split("/pull/")
+        c.repository = _[0]
+        c.number = _[1]
+        c.has_chatGPT_link = True
+        c.author = "comment_tmp"
+
+        # print(c.pr_url,c.repository,c.number)
+        pr = prs.get(c.pr_url, None)
+        if pr is None:
+            pr = PullRequestData()
+            pr.pr_url = c.pr_url
+            pr.repository = c.repository
+            pr.number = c.number
+            pr.author = "pr_tmp"
+        pr.comments.append(c)
+        prs[c.pr_url] = pr
+
+    return prs.values()
+    pass
+
+
 if __name__ == '__main__':
-    # wget_repo() 意味がわからんかって動かんから一旦コメントアウト
-    connection = mysql.connector.connect(
-        host='localhost',
-        user='me',
-        passwd='goma',
-        db='ease',
-        auth_plugin='mysql_native_password')
-    cursor = connection.cursor()
 
-    creatTable(cursor)
-
-    # fileHead = "../DevGPT/"
-    # fileHead = git_directory+"/"
     filePath = getFilePath()
     print(filePath)
     # path = './data/day/data_2023-05-27T00:00:00_3.json'
-    json_dict = readJson(filePath)
-    # for path in filePath:
-    #     with open(path, 'r+') as f:
-    #         jfile = json.load(f)
+    all_pull_requests = readJson(filePath)
 
-    # pullrequestのreturnを下のfor分に追加
-    print(json_dict.allCommitData.get_string())
-    for value in json_dict.Request_Data.values():
-        value.mention = emoji.replace_emoji(value.mention)
-        value.body = emoji.replace_emoji(value.body)
-        if value.url=="":
-            print("error")
-        addDataBase(cursor, value.path, value.writeAuthor, value.reviewAuthor, value.body, value.mention, value.url,
-                        value.create_time)
 
-    # PRs = deleteSamecommit(json_dict)
+    ## INFO
+    comments, comments_set = filter_comments(all_pull_requests)
+
+    prs = extract_prs(comments)
+    projects = extract_projects(comments)
+
+    with open("links.csv", "w") as o:
+        for c in comments:
+            o.write(f"{c.url}\n")
+
