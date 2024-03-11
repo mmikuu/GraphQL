@@ -1,35 +1,13 @@
 version: "3.7"
 services:
-  db:
-    image: mysql:8.0
+  app:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
     volumes:
-        - ./outputs:/work/db_outputs
-    ports:
-      - "3306:3306"
-    expose:
-      - 3306
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: admin
-      MYSQL_DATABASE: ease
-      MYSQL_USER: me
-      MYSQL_PASSWORD: goma
-    healthcheck:
-      test: mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD
-      interval: 10s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-#  app:
-#    build:
-#      context: ./Python
-#      dockerfile: ./Dockerfile
-#    volumes:
-#      - ./outputs:/work/py_outputs
-#    container_name: ChatGptReview
-#    depends_on:
-#      db:
-#        condition: service_healthy
+      - ./data:/work/data
+      - ./results:/work/results
+      - ./tokens.txt:/work/tokens.txt
+    container_name: ChatGptReview
 
 
